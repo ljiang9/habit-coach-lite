@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>习惯打卡 habit-coach-lite</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:860px;margin:24px auto;padding:0 16px}
+.card{border:1px solid #ddd;border-radius:8px;padding:12px;margin:12px 0}
+button{margin:4px;cursor:pointer;padding:6px 10px}
+.grid{display:grid;grid-template-columns:repeat(14,14px);gap:3px;margin-top:8px}
+.cell{width:14px;height:14px;border-radius:3px;background:#eee}
+.cell.on{background:#2e7d32}
+</style>
+</head>
+<body>
+<h1>习惯打卡 habit-coach-lite</h1>
+<p>本地保存；连续天数 streak 与 14 日热力图；规则建议。无 API Key。</p>
+<div class="card"><h3>添加习惯</h3>
+  <input id="habitName" placeholder="如：跑步 / 读书 / 喝水">
+  <button onclick="addHabit()">添加</button></div>
+<div id="list"></div>
+<script>
+function streakFromToday(isoDates,todayIso){const set=new Set(isoDates||[]);let streak=0;const d=new Date(todayIso);if(!set.has(iso(todayIso)))d.setDate(d.getDate()-1);while(set.has(iso(d))){streak++;d.setDate(d.getDate()-1);}return streak;}
+function iso(d){if(typeof d==='string')d=new Date(d);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
+function lastNDays(isoDates,todayIso,n){const set=new Set(isoDates||[]);const out=[];for(let i=n-1;i>=0;i--){const dd=new Date(todayIso);dd.setDate(dd.getDate()-i);out.push(set.has(iso(dd)));}return out;}
+function advice(streak,todayDone){if(streak===0&&!todayDone)return "今天还没打卡，从最小一步开始吧。";if(streak<3)return `已连续 ${streak} 天，前 3 天最关键，坚持！`;if(streak<10)return `不错，已连续 ${streak} 天，让它变成日常。`;return `太强了！连续 ${streak} 天，注意别松懈。`;}
+if(typeof module!=='undefined'){module.exports={streakFromToday,lastNDays,advice,iso};}
+const KEY='habits_v1';
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){return [];}}
+function save(x){localStorage.setItem(KEY,JSON.stringify(x));}
+function addHabit(){const name=document.getElementById('habitName').value.trim();if(!name)return;const arr=load();arr.push({name,days:[]});save(arr);document.getElementById('habitName').value='';render();}
+function toggle(i){const arr=load();const today=iso(new Date());const days=arr[i].days;const idx=days.indexOf(today);if(idx>=0)days.splice(idx,1);else days.push(today);save(arr);render();}
+function removeHabit(i){const arr=load();arr.splice(i,1);save(arr);render();}
+function render(){const arr=load();const today=iso(new Date());document.getElementById('list').innerHTML=arr.map((h,i)=>{const streak=streakFromToday(h.days,today);const doneToday=h.days.includes(today);const grid=lastNDays(h.days,today,14).map(on=>`<div class="cell ${on?'on':''}"></div>`).join('');return `<div class="card"><b>${h.name}</b> · 连续 ${streak} 天<button onclick="toggle(${i})">${doneToday?'今天已打 ✓':'打卡'}</button><button onclick="removeHabit(${i})">删除</button><div class="grid">${grid}</div><div style="color:#555;font-size:13px">${advice(streak,doneToday)}</div></div>`;}).join('');}
+render();
+</script>
+</body>
+</html>
